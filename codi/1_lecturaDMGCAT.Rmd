@@ -16,7 +16,7 @@ output:
     includes: 
       in_header: header.html
 params:
-  dir_dades: "dades/SIDIAP"
+   dir_dades_origen: "../DADES/epiDMGCAT/mostra"
 ---
 
 &nbsp;
@@ -117,9 +117,6 @@ link_source<-paste0("https://github.com/jrealgatius/Stat_codis/blob/master/funci
 devtools::source_url(link_source)
 
 
-
-directori_dades<-params$dir_dades
-
 #   template: template.html
 ```
 
@@ -129,27 +126,17 @@ directori_dades<-params$dir_dades
 >> Generació de taula plana i aplicació de primers criteris d'inclusió 
 
 
-
-# Generació de mostra
-
-```{r mostra, include = FALSE}
-
-# list.files(here::here("dades/SIDIAP"))
-# 
-# generar_mostra_fitxers(directori = directori_dades,
-#                        fitxer_poblacio="EPIDMGCAT_entregable_poblacio_20210222_142117.rds",
-#                        mida_mostra = 5000,
-#                        prefix = "test",
-#                        directori_test = "mostra")
-
+```{r lectura}
 
 dt_cataleg<-readRDS(here::here("dades","EPIDMGCAT_entregable_cataleg_20210222_142117.rds"))
-dt_poblacio<-readRDS(here::here(directori_dades,"EPIDMGCAT_entregable_poblacio_20210222_142117.rds"))
-
-```
 
 
-```{r lectura}
+dt_poblacio<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_poblacio_20210222_142117.rds"))
+dt_vars_assir<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_assir_20210222_142117.rds" )) 
+dt_variables<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_analitiques_20210222_142117.rds" )) 
+dt_geosanitaries<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_geosanitaries_20210222_142117.rds" )) 
+
+
 
  # "EPIDMGCAT_entregable_cataleg_20210222_142117.rds"                   
  # "EPIDMGCAT_entregable_cmbdh_diagnostics_20210222_142117.rds"         
@@ -163,20 +150,6 @@ dt_poblacio<-readRDS(here::here(directori_dades,"EPIDMGCAT_entregable_poblacio_2
  # "EPIDMGCAT_entregable_variables_geosanitaries_20210222_142117.rds"   
  # "EPIDMGCAT_entregable_variables_socioeconomiques_20210222_142117.rds"
 
-
-dt_cataleg<-readRDS(here::here("dades","EPIDMGCAT_entregable_cataleg_20210222_142117.rds"))
-dt_poblacio<-readRDS(here::here(directori_dades,"EPIDMGCAT_entregable_poblacio_20210222_142117.rds")) %>% as_tibble()
-dt_vars_assir<-readRDS(here::here(directori_dades,"EPIDMGCAT_entregable_variables_assir_20210222_142117.rds" )) %>% as_tibble()
-
-
-# dt_diagnostics_HOSP<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_cmbdh_diagnostics_20200206_104913.rds")) %>% as_tibble()
-# dt_diagnostics_AP<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_diagnostics_20200206_104913.rds")) %>% as_tibble()
-# dt_derivacions<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_derivacions_20200206_104913.rds")) %>% as_tibble()
-# dt_facturacio<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_farmacs_facturats_20200206_104913.rds")) %>% as_tibble()
-# dt_poblacio<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_poblacio_20200206_104913.rds")) %>% as_tibble()
-# dt_tabaquisme<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_tabaquisme_20200206_104913.rds")) %>% as_tibble()
-# dt_analitiques<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_variables_analitiques_20200206_104913.rds")) %>% as_tibble()
-# dt_cliniques<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_variables_cliniques_20200206_104913.rds")) %>% as_tibble()
 
 
 ```
