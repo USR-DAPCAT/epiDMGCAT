@@ -1,9 +1,11 @@
 # History files
 .Rhistory
 .Rapp.history
-
+.Rproj
 # Session Data files
 .RData
+.csv
+/*.csv
 
 # User-specific files
 .Ruserdata

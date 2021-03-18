@@ -1,0 +1,215 @@
+---
+title: "Prevalença de diabetis gestacional i d’alteracions glucèmiques en el postpart a Catalunya. Estudi eDMGCAT"
+author: "Jordi Real & Ramó Puig"
+website: "https://github.com/USR-DAPCAT/"
+
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    fig_caption: true
+    css: logos_css/usr_styles.css
+      
+    includes: 
+      in_header: header.html
+params:
+  dir_dades: "dades/SIDIAP"
+---
+
+&nbsp;
+<script>
+   $(document).ready(function() {
+     $head = $('#header');
+     $head.prepend('<img src=\"https://www.idiapjgol.org/images/logo.png\" style=\"float: right ;width: 130px;\"/>')
+     $head.prepend('<img src=\"https://avatars2.githubusercontent.com/u/57066591?s=200&v=4\" style=\"text-align: center;margin:auto;width: 80px;\"/>')
+   });
+</script>
+
+
+<div class="watermark">DRAFT</div>
+
+****
+
+```{r htmltemplate, echo=FALSE}
+# ![](logoDAP_Cat.png)
+
+# htmltools::img(src = knitr::image_uri(file.path("logos_css", "logo.jpg")), 
+#                alt = 'logo', 
+#                style = 'position:absolute; top:-90px; right:1%; padding:5px;')
+
+img<-htmltools::img(src = knitr::image_uri(file.path("logos_css", "logo.jpg")), 
+               alt = 'logo', 
+               style = 'position:absolute; text-align: center;padding-right:150px;width: 185px;padding:10px;')
+
+# src="https://www.idiapjgol.org/images/logo.png" 
+# style= 'float: right ;width: 130px'
+# 
+# src="https://avatars2.githubusercontent.com/u/57066591?s=200&v=4"
+# style = 'text-align: center;;margin:auto;width: 80px'
+
+# padding-left:30px
+
+htmlhead <- paste0('
+  <script>
+  document.write(\'<div class="logos">',img,'</div>\')
+  </script>
+  ')
+
+readr::write_lines(htmlhead, path = "header.html")
+
+```
+
+
+## 0. Estat:
+
+**Últimes actualizacions** 
+
+&check; Lectura de fitxers  <br/>
+&check;   <br/>
+
+**Realizat**
+
+
+&check; ....  <br/>
+&check; ....   <br/>
+
+
+**Pendent**
+
+* Exploratori 
+* Revisió i depuració d'errors 
+* Edició de taules 
+
+## 1. Objectius
+
+1. Conèixer la prevalença anual de DMG i comparar les característiques basals de les gestants amb DMG amb les de les gestants sense DMG.
+2. Determinar el percentatge de les alteracions glucèmiques en el postpart. 
+
+Calcular el risc relatiu de complicacions relacionades amb l’embaràs, el part i del recent nascut en les dones amb DMG en comparació amb les dones sense DMG
+
+## 2. Mètodes
+
+Metodologia:
+Fase I: Estudi transversal per determinar l’objectiu 1
+Fase II: Estudi de cohorts retrospectiu per determinar l’objectiu 2.
+S’inclouran totes les gestants a qui se’ls ha realitzat el cribratge de DMG entre 2010-2019.
+
+
+## 3. Determinacions
+
+La informació clínica, analítica i de tractament farmacològic s’obtindrà de la base de dades SIDIAP que inclou la informació de la història clínica informatitzada a l’atenció primària (e_CAP).
+
+## 4. Anàlisi estadístic
+
+Es descriu el perfil demogràfic i clínic dels pacients inclosos emprenant els estadístics més adeqüats en cada cas en funció del tipus de variable. Es descriu el perfil demogràfic i clínic dels professionals inclosos emprenant els estadístics més adeqüats en cada cas en funció del tipus de variable.I es mira la seva mobilitat, respecte la seva edat i malalties cardiovasculars.
+
+
+
+```{r setup, include = F}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, include=F,size="huge")
+library(ggplot2)
+library(dplyr)
+# Carrego funcions -------------------
+link_source<-paste0("https://github.com/jrealgatius/Stat_codis/blob/master/funcions_propies.R","?raw=T")
+devtools::source_url(link_source)
+
+
+
+directori_dades<-params$dir_dades
+
+#   template: template.html
+```
+
+
+# FASE LECTURA
+
+>> Generació de taula plana i aplicació de primers criteris d'inclusió 
+
+
+
+# Generació de mostra
+
+```{r mostra, include = FALSE}
+
+# list.files(here::here("dades/SIDIAP"))
+# 
+# generar_mostra_fitxers(directori = directori_dades,
+#                        fitxer_poblacio="EPIDMGCAT_entregable_poblacio_20210222_142117.rds",
+#                        mida_mostra = 5000,
+#                        prefix = "test",
+#                        directori_test = "mostra")
+
+
+dt_cataleg<-readRDS(here::here("dades","EPIDMGCAT_entregable_cataleg_20210222_142117.rds"))
+dt_poblacio<-readRDS(here::here(directori_dades,"EPIDMGCAT_entregable_poblacio_20210222_142117.rds"))
+
+```
+
+
+```{r lectura}
+
+ # "EPIDMGCAT_entregable_cataleg_20210222_142117.rds"                   
+ # "EPIDMGCAT_entregable_cmbdh_diagnostics_20210222_142117.rds"         
+ # "EPIDMGCAT_entregable_diagnostics_20210222_142117.rds"               
+ # "EPIDMGCAT_entregable_farmacs_facturats_20210222_142117.rds"         
+ # "EPIDMGCAT_entregable_farmacs_prescrits_20210222_142117.rds"         
+ # "EPIDMGCAT_entregable_poblacio_20210222_142117.rds"                  
+ # "EPIDMGCAT_entregable_variables_analitiques_20210222_142117.rds"     
+ # "EPIDMGCAT_entregable_variables_assir_20210222_142117.rds"           
+ # "EPIDMGCAT_entregable_variables_cliniques_20210222_142117.rds"       
+ # "EPIDMGCAT_entregable_variables_geosanitaries_20210222_142117.rds"   
+ # "EPIDMGCAT_entregable_variables_socioeconomiques_20210222_142117.rds"
+
+
+dt_cataleg<-readRDS(here::here("dades","EPIDMGCAT_entregable_cataleg_20210222_142117.rds"))
+dt_poblacio<-readRDS(here::here(directori_dades,"EPIDMGCAT_entregable_poblacio_20210222_142117.rds")) %>% as_tibble()
+dt_vars_assir<-readRDS(here::here(directori_dades,"EPIDMGCAT_entregable_variables_assir_20210222_142117.rds" )) %>% as_tibble()
+
+
+# dt_diagnostics_HOSP<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_cmbdh_diagnostics_20200206_104913.rds")) %>% as_tibble()
+# dt_diagnostics_AP<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_diagnostics_20200206_104913.rds")) %>% as_tibble()
+# dt_derivacions<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_derivacions_20200206_104913.rds")) %>% as_tibble()
+# dt_facturacio<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_farmacs_facturats_20200206_104913.rds")) %>% as_tibble()
+# dt_poblacio<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_poblacio_20200206_104913.rds")) %>% as_tibble()
+# dt_tabaquisme<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_tabaquisme_20200206_104913.rds")) %>% as_tibble()
+# dt_analitiques<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_variables_analitiques_20200206_104913.rds")) %>% as_tibble()
+# dt_cliniques<-readRDS(here::here(directori_dades,"epiPEUCAT_entregable_variables_cliniques_20200206_104913.rds")) %>% as_tibble()
+
+
+```
+
+
+```{r agregacio}
+
+
+```
+
+
+
+```{r fusio}
+
+
+```
+
+
+## 2. Salvar dades 
+
+```{r salvar_dtplana, include=T}
+
+
+
+
+```
+
+
+&nbsp;
+<hr />
+<p style="text-align: center;">A work by $Jordi Real$ </a></p>
+<p style="text-align: center;">$Llepali System$ </a></p>
+<p style="text-align: center;"><span style="color: #808080;"><em><https://github.com/USR-DAPCAT/></em></span></p>
+
+
+
