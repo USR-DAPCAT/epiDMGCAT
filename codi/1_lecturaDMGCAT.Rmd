@@ -116,6 +116,7 @@ library(dplyr)
 link_source<-paste0("https://github.com/jrealgatius/Stat_codis/blob/master/funcions_propies.R","?raw=T")
 devtools::source_url(link_source)
 
+source("funcions_DMG.R")
 
 #   template: template.html
 ```
@@ -149,6 +150,38 @@ dt_geosanitaries<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregab
  # "EPIDMGCAT_entregable_variables_cliniques_20210222_142117.rds"       
  # "EPIDMGCAT_entregable_variables_geosanitaries_20210222_142117.rds"   
  # "EPIDMGCAT_entregable_variables_socioeconomiques_20210222_142117.rds"
+
+
+
+```
+
+```{r depuracio_dades_origen, eval=FALSE}
+# Eliminar accents i caracters estrants de camps origen
+# dt_origen<-read.csv2(here::here("dades","DMG_Origen.csv"))
+
+# dt_vars_assir<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_assir_20210222_142117.rds" )) 
+
+# dt_vars_assir<-readRDS(here::here("../DADES/epiDMGCAT/SIDIAP","EPIDMGCAT_entregable_variables_assir_20210222_142117.rds" )) 
+dt_origen<- dt_vars_assir %>% 
+  filter(cod%in%c("PACR003","PACR004")) %>% 
+  netejar_val_txt() %>% 
+  select(cod,val_txt) %>% distinct() 
+  
+
+dt_origen <- dt_origen %>% select(cod,val_txt) %>% distinct() 
+
+# numerar 
+dt_origen<-dt_origen %>% arrange(cod,val_txt) %>%  transmute(id=1:n(),cod,val_txt)  
+
+# dt_origen %>% filter(cod%in%c("PACR003","PACR004")) %>% 
+#   mutate(val_txt=stringi::stri_trans_general(val_txt, id="Latin-ASCII")) %>% 
+#   select(cod,val_txt) %>% distinct()
+
+
+# write.csv2(dt_origen,"dt_orgigen.csv")
+
+# Netejar caracters extranys d'origen Base de dades 
+dt_vars_assir<-netejar_val_txt(dt_vars_assir)
 
 
 
