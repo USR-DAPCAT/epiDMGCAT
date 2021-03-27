@@ -12,11 +12,11 @@ output:
     toc_float: true
     fig_caption: true
     css: logos_css/usr_styles.css
+    in_header: header.html
       
-    includes: 
-      in_header: header.html
 params:
-   dir_dades_origen: "../DADES/epiDMGCAT/mostra"
+  dir_dades_origen: "../../DADES/epiDMGCAT/mostra"
+  dir_dades: "dades/mostra"
 ---
 
 &nbsp;
@@ -129,27 +129,112 @@ source("funcions_DMG.R")
 
 ```{r lectura}
 
-dt_cataleg<-readRDS(here::here("dades","EPIDMGCAT_entregable_cataleg_20210222_142117.rds"))
 
+directori_dades_origen<-params$dir_dades_origen
+directori_dades<-params$dir_dades
 
-dt_poblacio<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_poblacio_20210222_142117.rds"))
-dt_vars_assir<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_assir_20210222_142117.rds" )) 
-dt_variables<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_analitiques_20210222_142117.rds" )) 
+conductor_codis<-here::here("cataleg_epiDMG.xlsx")
+dt_cataleg<-readxl::read_excel(conductor_codis,col_types = "text")
+
+##############################################################################
+#
+##i)   EPIDMGCAT_entregable_poblacio_20210222_142117
+#ii)  EPIDMGCAT_entregable_variables_assir_20210222_142117
+##iii) EPIDMGCAT_entregable_variables_analitiques_20210222_142117
+##iv)  EPIDMGCAT_entregable_cmbdh_diagnostics_20210222_142117
+##v)   EPIDMGCAT_entregable_diagnostics_20210222_142117
+##vi)  EPIDMGCAT_entregable_farmacs_facturats_20210222_142117
+#vii) EPIDMGCAT_entregable_farmacs_prescrits_20210222_142117
+##viii)EPIDMGCAT_entregable_variables_cliniques_20210222_142117
+#ix)  EPIDMGCAT_entregable_variables_geosanitaries_20210222_142117
+##x)   EPIDMGCAT_entregable_variables_socioeconomiques_20210222_142117
+#
+##############################################################################
+#i)
+dt_poblacio<-readRDS(here::here(directori_dades_origen,"EPIDMGCAT_entregable_poblacio_20210222_142117.rds"))
+#ii)
+dt_vars_assir<-readRDS(here::here(directori_dades_origen,"EPIDMGCAT_entregable_variables_assir_20210222_142117.rds" )) 
+#iii)
+dt_analitiques<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_analitiques_20210222_142117.rds" )) 
+#iv)
+dt_diagnostics_HOSP<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_cmbdh_diagnostics_20210222_142117.rds" )) 
+#v)
+dt_diagnostics_AP<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_diagnostics_20210222_142117.rds" )) 
+#vi)
+dt_farmacs_facturats<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_farmacs_facturats_20210222_142117.rds" )) 
+#vii)
+dt_farmacs_prescrits<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_farmacs_prescrits_20210222_142117.rds" )) 
+#viii)
+dt_cliniques<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_cliniques_20210222_142117.rds" )) 
+#ix)
 dt_geosanitaries<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_geosanitaries_20210222_142117.rds" )) 
+#x)
+dt_socioeconomiques<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entregable_variables_socioeconomiques_20210222_142117.rds" )) 
+
+dt_diagnostics_AP_HOSP<-dt_diagnostics_AP%>%transmute(idp,cod=as.character(cod),dat,agr)%>%
+  bind_rows(select(dt_diagnostics_HOSP,idp,cod,dat,agr))
 
 
 
- # "EPIDMGCAT_entregable_cataleg_20210222_142117.rds"                   
- # "EPIDMGCAT_entregable_cmbdh_diagnostics_20210222_142117.rds"         
- # "EPIDMGCAT_entregable_diagnostics_20210222_142117.rds"               
- # "EPIDMGCAT_entregable_farmacs_facturats_20210222_142117.rds"         
- # "EPIDMGCAT_entregable_farmacs_prescrits_20210222_142117.rds"         
- # "EPIDMGCAT_entregable_poblacio_20210222_142117.rds"                  
- # "EPIDMGCAT_entregable_variables_analitiques_20210222_142117.rds"     
- # "EPIDMGCAT_entregable_variables_assir_20210222_142117.rds"           
- # "EPIDMGCAT_entregable_variables_cliniques_20210222_142117.rds"       
- # "EPIDMGCAT_entregable_variables_geosanitaries_20210222_142117.rds"   
- # "EPIDMGCAT_entregable_variables_socioeconomiques_20210222_142117.rds"
+
+```
+
+```{r agregacio1, include=F}
+
+#agregacio poblacio ------------
+
+#i)
+#Patologies Previes! [cap -INF]
+dtagr_poblacio<-dt_poblacio
+
+
+```
+
+
+```{r agregacio2, include=F}
+
+#agregacio Problemes de salut ------------
+
+#ii)
+#Patologies Previes! [cap -INF]
+dtagr_diagnostics_AP_HOSP<-agregar_problemes(select(dt_diagnostics_AP_HOSP,idp,cod,dat),
+                                        bd.dindex ="20191231",
+                                        dt.agregadors=select(dt_cataleg,cod,agr),
+                                        finestra.dies=c(-Inf,0),prefix = "DG.")
+
+
+```
+
+
+
+```{r agregacio3, include=F}
+
+#agregacio facturacio ------------
+
+#iii)
+dt_facturacio<-dt_farmacs_facturats %>% transmute(idp,cod,dat,env)
+#
+dtagr_facturacio<-agregar_facturacio(
+  dt=dt_facturacio,
+  bd.dindex="20191231",
+  finestra.dies=c(-90,0),
+  dt.agregadors=select(dt_cataleg,cod,agr=agr),
+  prefix="FF.",
+  camp_agregador="agr",
+  agregar_data=T)
+
+
+dtagr_prescrip<-agregar_prescripcions(
+  dt=dt_farmacs_prescrits,
+  dt.agregadors=select(dt_cataleg,cod,agr),
+  prefix="FP.",
+  bd.dindex=20191231,
+  finestra.dies=c(-Inf,0),
+  camp_agregador="agr",
+  agregar_data=T) 
+
+
+
 
 
 
@@ -188,7 +273,51 @@ dt_vars_assir<-netejar_val_txt(dt_vars_assir)
 ```
 
 
-```{r agregacio}
+
+```{r agregacio4, include=F}
+
+#iv) agregacio Analitiques+ Cliniques ------------
+# data mes propera!
+# analatiques
+dt_variables<-dt_analitiques%>% bind_rows(dt_cliniques) %>% select(-agr) %>% 
+  left_join(select(dt_cataleg,cod,agr),by="cod") %>% 
+  select(-cod) %>% rename(cod=agr)
+
+dtagr_variables<-agregar_analitiques(dt=dt_variables,bd.dindex="20191231",finestra.dies = c(-365,0))
+
+```
+
+
+```{r agregacio5, include=F}
+
+#agregacio socioeconomiques ------------
+
+#v)
+#Patologies Previes! [cap -INF]
+dtagr_socioeconomiques<-dt_socioeconomiques
+
+
+```
+
+
+```{r agregacio6, include=F}
+
+#agregacio dt_geosanitaries ------------
+
+#vi)
+#dt_geosanitaries ??
+#dtagr_geosanitaries<-dt_geosanitaries
+
+
+```
+
+```{r agregacio7, include=F}
+
+#agregacio vars_assir ------------
+
+#vii)
+#vars_assir ??
+#dtagr_vars_assir<-dt_vars_assir
 
 
 ```
@@ -197,6 +326,14 @@ dt_vars_assir<-netejar_val_txt(dt_vars_assir)
 
 ```{r fusio}
 
+#left_join(select(dtagr_problemes_2018_EPIPEU_AP_HOSP2b,-dtindex),by="idp")
+
+dt_plana<-dtagr_poblacio %>%
+ left_join(dtagr_socioeconomiques,by="idp")%>%  
+  left_join(dtagr_diagnostics_AP_HOSP,by="idp")%>%
+   left_join(select(dtagr_facturacio,-dtindex),by="idp")%>%
+    left_join(select(dtagr_prescrip,-dtindex),by="idp")%>%
+     left_join(select(dtagr_variables,-dtindex),by="idp")
 
 ```
 
@@ -205,6 +342,7 @@ dt_vars_assir<-netejar_val_txt(dt_vars_assir)
 
 ```{r salvar_dtplana, include=T}
 
+saveRDS(dt_plana, file=here::here(directori_dades,"dt_plana.rds"))
 
 
 
@@ -213,7 +351,7 @@ dt_vars_assir<-netejar_val_txt(dt_vars_assir)
 
 &nbsp;
 <hr />
-<p style="text-align: center;">A work by $Jordi Real$ </a></p>
+<p style="text-align: center;">A work by $Jordi Real$ $Ray Puig$</a></p>
 <p style="text-align: center;">$Llepali System$ </a></p>
 <p style="text-align: center;"><span style="color: #808080;"><em><https://github.com/USR-DAPCAT/></em></span></p>
 
