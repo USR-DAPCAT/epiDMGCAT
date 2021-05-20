@@ -15,7 +15,7 @@ output:
     in_header: header.html
       
 params:
-  dir_dades_origen: "../../DADES/epiDMGCAT/mostra"
+  dir_dades_origen: "../DADES/epiDMGCAT/mostra"
   dir_dades: "dades/mostra"
 ---
 
@@ -109,12 +109,14 @@ Es descriu el perfil demogràfic i clínic dels pacients inclosos emprenant els 
 
 
 ```{r setup, include = F}
-knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, include=F,size="huge")
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, include=T,size="huge")
 library(ggplot2)
 library(dplyr)
 # Carrego funcions -------------------
-link_source<-paste0("https://github.com/jrealgatius/Stat_codis/blob/master/funcions_propies.R","?raw=T")
-devtools::source_url(link_source)
+# link_source<-paste0("https://github.com/jrealgatius/Stat_codis/blob/master/funcions_propies.R","?raw=T")
+# devtools::source_url(link_source)
+
+source("../../../../Google Drive/Stat_codis/funcions_propies.R")
 
 source("funcions_DMG.R")
 
@@ -133,7 +135,7 @@ source("funcions_DMG.R")
 directori_dades_origen<-params$dir_dades_origen
 directori_dades<-params$dir_dades
 
-conductor_codis<-here::here("cataleg_epiDMG.xlsx")
+conductor_codis<-here::here("cataleg_epiDMG.xls")
 dt_cataleg<-readxl::read_excel(conductor_codis,col_types = "text")
 
 ##############################################################################
@@ -173,13 +175,206 @@ dt_socioeconomiques<-readRDS(here::here(params$dir_dades_origen,"EPIDMGCAT_entre
 
 dt_diagnostics_AP_HOSP<-dt_diagnostics_AP%>%transmute(idp,cod=as.character(cod),dat,agr)%>%
   bind_rows(select(dt_diagnostics_HOSP,idp,cod,dat,agr))
+rm(dt_diagnostics_AP,dt_diagnostics_HOSP)
 
+
+```
+
+# Definició de data index
+
+Identificació d'episodis d'embaraç (id_episodi) i classificació de DMG en funció de probes de cribatge
+
+## Mostra de 30 subjectes i variables relacionades amb embaraç i DMG
+
+```{r}
+
+dt_mostra10<-dt_poblacio %>% mostreig_ids(id="idp",n_mostra = 40)
+
+# Variables pacient
+dt_mostra10 %>% select(-c(cohort,agr_pais)) %>%  arrange(idp) %>% 
+  kable(caption = "Mostra de 10 casos") %>% kableExtra::kable_styling()
+
+# Variables Embarazo
+dt_vars_assir %>% filter(cod=="PACI017" | cod=="PADR001") %>% semi_join(dt_mostra10) %>% arrange(idp,cod) %>% 
+  kable(caption = "Variables relacionades amb embaras (Data última regla/...)") %>% kableExtra::kable_styling()
+
+# Variables Diabetes gestacional assir:
+dt_vars_assir %>% filter(cod=="PARA007") %>% semi_join(dt_mostra10) %>% arrange(idp) %>% 
+  kable(caption = "Variables Diabetes gestacional assir") %>% kableExtra::kable_styling()
+
+# diagnostic Gestació
+dt_diagnostics_AP_HOSP %>% filter(stringr::str_detect(cod,"Z33")) %>% semi_join(dt_mostra10) %>% arrange(idp) %>% 
+  kable(caption = "Diagnostic Gestació") %>% kableExtra::kable_styling()
+
+# Variables Prueba cribado DMG
+dt_analitiques %>% filter(cod%in% c("SOG50_0","SOG50_60","SOG100_0","SOG100_60","SOG100_120","SOG100_180","SOG75_120")) %>% 
+  semi_join(dt_mostra10) %>% arrange(idp) %>% 
+  kable(caption = "Cribatge DMG: SOG50_0,SOG50_60,SOG100_0,SOG100_60,SOG100_120,SOG100_180,SOG75_120") %>% 
+  kableExtra::kable_styling()
+
+
+# Variables Diabetes gestacional segons Codi diagnostic
+dt_diagnostics_AP_HOSP %>% filter(stringr::str_detect(cod,"O24")) %>% semi_join(dt_mostra10) %>% arrange(idp) %>% 
+  kable(caption = "Variables Diabetes gestacional segons codi diagnostic") %>% kableExtra::kable_styling()
 
 
 
 ```
 
-```{r agregacio1, include=F}
+## Identificació de diferents episodis d'embaraç en funció de les probes de cribatge
+
+Es considera nou episodi d'embaraç quan passen 6 o més mesos (180 dies) entre última prueba de cribaje i la seguent
+Les probes de cribatge considerades són: "SOG50_0","SOG50_60","SOG100_0","SOG100_60","SOG100_120","SOG100_180","SOG75_120"
+
+```{r}
+# Variables Prueba cribado DMG para identificar episodios y periodos de embarazo con pruebas de cribado
+# Se considera episodio nuevo de embarazo, cuando passan 6 o más méses (180 dias) entre última prueba de cribaje i la siguiente 
+
+# c("SOG50_0","SOG50_60","SOG100_0","SOG100_60","SOG100_120","SOG100_180","SOG75_120")
+
+dt_temp<-
+  dt_analitiques %>% 
+  filter(cod%in% c("SOG50_0","SOG50_60","SOG100_0","SOG100_60","SOG100_120","SOG100_180","SOG75_120")) %>% 
+  select(idp,dat) %>% arrange(idp,dat) %>% mutate(num=0) %>% 
+  group_by(idp) %>% 
+  mutate(dies=ymd(dat)-lag(ymd(dat))) %>% 
+  mutate(dies=as.numeric(dies)) %>% 
+  filter(dies>0 | is.na(dies)) %>% # Elimino dates repetides dins d'un individu
+  mutate (num=if_else(dies>180,lag(num)+1,lag(num))) %>% ungroup() 
+  
+dt_index_long<-
+  dt_temp %>% 
+  mutate(num=if_else(is.na(num),0,num)) %>% 
+  group_by(idp) %>% 
+  mutate(numcum=cumsum(num)) %>% 
+  ungroup() %>% 
+  mutate(numcum=numcum+1) %>% 
+  transmute(idp,id_episodi=numcum,dat) 
+
+# Agrego per id episodi 
+dt_index<-dt_index_long %>% group_by(idp,id_episodi) %>% summarise(dtindex=min(dat)) %>% ungroup()
+ 
+# dt_index %>% filter(idp=="00fb86cc2021feab061dad3b7d58c35991d05029")
+
+
+```
+# Classificació de grups en DGM / no DMG
+
+Segons els seguents condicionals
+- **a) DMG**: 
+
+-Definició: SOG50_60min > 140 i >2 valors de la SOG100 (SOG100_0min > 95; SOG100_60min > 180; SOG100_120min > 155; SOG100_180min > 140)
+-Es comenta que en les dones que tinguin SOG50_60min > 140 però que no disposem de SOG100 o aquesta estigui incompleta (per vòmits, intolerancia, etc) es farà una estimació del % de possibles DMG en funció del percentatge de dones amb cribratge positiu (SOG50_60min > 140) i test diagnòstic positiu (SOG100 > 2 valors)
+
+
+- **b) NO DMG**:
+	-Definició:	SOG50_60min < 140 o
+SOG50_60min > 140 i <2 valors de la SOG100 (SOG100_0min > 95; SOG100_60min > 180; SOG100_120min > 155; SOG100_180min > 140)
+-Cal tenir present que una mateixa dona pot tenir en una mateixa gestació varies SOG100 amb 1 valor alterat però que no és diagnòstic de DMG. 
+
+
+```{r}
+dt_temp<-
+  dt_analitiques %>% filter(cod%in% c("SOG50_0","SOG50_60","SOG100_0","SOG100_60","SOG100_120","SOG100_180","SOG75_120"))
+
+dt_temp2<-
+  dt_index_long %>% left_join (dt_temp,by=c("idp","dat")) %>% 
+  select(idp,id_episodi,dat,cod,val) %>% 
+  mutate(alterat1= if_else (cod=="SOG100_0" & val>95,1,0,missing = 0),
+         alterat2= if_else (cod=="SOG100_60" & val>180,1,0,missing = 0),
+         alterat3= if_else (cod=="SOG100_120" & val>155,1,0,missing = 0),
+         alterat4= if_else (cod=="SOG100_180" & val>140,1,0,missing = 0)) %>% 
+  group_by(idp,id_episodi,dat) %>% 
+    mutate(Nalterats=sum(alterat1+alterat2+alterat3+alterat4)) %>% 
+  ungroup() %>% 
+  group_by(idp,id_episodi) %>% 
+    mutate(grup=if_else(Nalterats>=2,1,0)) %>% 
+  ungroup()
+
+# Agrego per episodi grup 
+dt_index<- dt_index %>% 
+  left_join(dt_temp2,by=c("idp","id_episodi")) %>% 
+  select(idp,id_episodi,dtindex,grup) %>% 
+  group_by(idp,id_episodi,dtindex) %>% 
+    summarise(grup=max(grup)) %>% 
+  ungroup()
+
+#  
+descrTable(~grup,data=dt_index,method = 3) %>% export2md()
+
+ # Agrego historics d'analitiques per episodi 
+dt_historics_SOG<-
+  dt_index_long %>% 
+  left_join(dt_index) %>% 
+  left_join(dt_temp,by=c("idp","dat")) %>% 
+  select(idp,id_episodi,dtindex,dat,grup,cod,val)
+
+
+```
+
+## Validació de classifiació DMG / no DMG segons historic de probes
+
+### Grup DMG 
+
+```{r}
+dt_historics_SOG %>% filter(grup==1) %>% head(100) %>%
+  kable(caption = "Historic de Diabetes gestacional segons probes") %>% kableExtra::kable_styling()
+
+
+```
+### Grup no DMG 
+
+```{r}
+dt_historics_SOG %>% filter(grup==0) %>% head(100) %>%
+  kable(caption = "Historic de Diabetes gestacional segons probes") %>% kableExtra::kable_styling()
+
+
+```
+# Agregació de variables en data index
+
+```{r}
+
+# Agregació de base de dades en data index
+dt_temp<-dt_index %>% select(idp,dtindex)
+
+dtagr_diagnostic<-
+  dt_diagnostics_AP_HOSP %>% 
+  agregar_problemes(bd.dindex = dt_temp,dt.agregadors = dt_cataleg,finestra.dies=c(-Inf,+180))
+
+dt_analitiques %>% 
+  agregar_analitiques(bd.dindex = dt_temp,finestra.dies = c(-365,+180),fun="last")
+
+
+dt_index %>% left_join(dt_poblacio,by="idp")
+
+
+```
+
+
+
+```{r, eval=FALSE}
+
+# Fecha2 part/perdua fetal/avortament (SEGONS AGRUPADOR PART DE CATALEG)
+dt_diagnostics_AP_HOSP
+dt_cataleg %>% filter(AGR2=="PART") %>% semi_join(dt_diagnostics_AP)
+
+# Fecha de cribado
+# PF-TOLERÀNCIA A LA GLUCOSA (O´SULLIVAN) (50G GLUCOSA) (1H)(mg/dL)
+dt_analitiques %>% filter(agr=="SOG50_0") 
+
+# Fecha de glucemia basal
+dt_analitiques %>% filter(agr=="GLUCOSA") 
+
+# 
+table(dt_poblacio$cohort)
+dt_vars_assir %>% filter(cod=="PART002")
+dt_vars_assir %>% filter(agr=="Part")
+
+
+```
+
+
+```{r agregacio1, include=F, eval=FALSE}
 
 #agregacio poblacio ------------
 
@@ -191,7 +386,7 @@ dtagr_poblacio<-dt_poblacio
 ```
 
 
-```{r agregacio2, include=F}
+```{r agregacio2, include=F, eval=FALSE}
 
 #agregacio Problemes de salut ------------
 
@@ -207,7 +402,7 @@ dtagr_diagnostics_AP_HOSP<-agregar_problemes(select(dt_diagnostics_AP_HOSP,idp,c
 
 
 
-```{r agregacio3, include=F}
+```{r agregacio3, include=F, eval=FALSE}
 
 #agregacio facturacio ------------
 
@@ -274,7 +469,7 @@ dt_vars_assir<-netejar_val_txt(dt_vars_assir)
 
 
 
-```{r agregacio4, include=F}
+```{r agregacio4, include=F, eval=FALSE}
 
 #iv) agregacio Analitiques+ Cliniques ------------
 # data mes propera!
@@ -288,7 +483,7 @@ dtagr_variables<-agregar_analitiques(dt=dt_variables,bd.dindex="20191231",finest
 ```
 
 
-```{r agregacio5, include=F}
+```{r agregacio5, include=F, eval=FALSE}
 
 #agregacio socioeconomiques ------------
 
@@ -300,7 +495,7 @@ dtagr_socioeconomiques<-dt_socioeconomiques
 ```
 
 
-```{r agregacio6, include=F}
+```{r agregacio6, include=F,eval=FALSE}
 
 #agregacio dt_geosanitaries ------------
 
@@ -311,7 +506,7 @@ dtagr_socioeconomiques<-dt_socioeconomiques
 
 ```
 
-```{r agregacio7, include=F}
+```{r agregacio7, include=F,eval=FALSE}
 
 #agregacio vars_assir ------------
 
@@ -324,7 +519,7 @@ dtagr_socioeconomiques<-dt_socioeconomiques
 
 
 
-```{r fusio}
+```{r fusio,eval=FALSE}
 
 #left_join(select(dtagr_problemes_2018_EPIPEU_AP_HOSP2b,-dtindex),by="idp")
 
@@ -340,7 +535,7 @@ dt_plana<-dtagr_poblacio %>%
 
 ## 2. Salvar dades 
 
-```{r salvar_dtplana, include=T}
+```{r salvar_dtplana, include=T,eval=FALSE}
 
 saveRDS(dt_plana, file=here::here(directori_dades,"dt_plana.rds"))
 
